@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PolePosition</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>PolePosition</h1>
+        <nav>
+            <button data-tab="home" class="active">Главная</button>
+            <button data-tab="circuits">Трассы</button>
+            <button data-tab="drivers">Пилоты</button>
+            <button data-tab="constructors">Команды</button>
+            <button data-tab="grandprix">Гран-при</button>
+            <button data-tab="standings">Зачёты</button>
+        </nav>
+    </header>
+
+    <main>
+        <div id="home" class="tab-content active">
+            <div id="next-gp"></div>
+        </div>
+        <div id="circuits" class="tab-content">
+            <div id="circuits-content"></div>
+        </div>
+        <div id="drivers" class="tab-content">
+            <div class="drivers-layout"> <!--Две колонки-->
+                <div id="drivers-content"></div>
+                <div class="standings-switch">
+                    <button class="standings-btn active" data-sort="default">По умолчанию</button> <!--на каждой кнопке разное значение-->
+                    <button class="standings-btn" data-sort="wins">По победам</button>
+                    <button class="standings-btn" data-sort="podiums">По подиумам</button>
+                </div>
+            </div>
+        </div>
+        <div id="constructors" class="tab-content">
+            <div id="constructors-content"></div>
+        </div>
+        <div id="grandprix" class="tab-content">
+            <div id="grandprix-content"></div>
+        </div>
+        <div id="standings" class="tab-content">
+            <div class="standings-switch">
+                <button class="standings-btn active" data-standings="drivers">Пилоты</button>
+                <button class="standings-btn" data-standings="constructors">Команды</button>
+            </div>
+            <div id="standings-content"></div>
+        </div>
+    </main>
+    
+    <script src="app.js"></script>
+</body>
+</html>
