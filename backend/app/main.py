@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app import models
-from app.routers import circuits, drivers, constructors, grandprix, racesessions, results, standings
+from app.routers import circuits, drivers, constructors, grandprix, racesessions, results, standings,qualifying
 
 
 Base.metadata.create_all(bind=engine)
@@ -26,6 +26,8 @@ app.include_router(grandprix.router)
 app.include_router(racesessions.router)
 app.include_router(results.router)
 app.include_router(standings.router)
+app.include_router(qualifying.router)
+
 
 
 

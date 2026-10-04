@@ -90,3 +90,16 @@ class ConstructorStanding(Base):
     constructor_id = Column(Integer, ForeignKey("constructors.id"))
     points = Column(Float)
 
+
+
+class QualifyingResult(Base):
+    __tablename__ = "qualifyingresults"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("racesessions.id"))
+    driver_id = Column(Integer, ForeignKey("drivers.id"))
+    constructor_id = Column(Integer, ForeignKey("constructors.id"))
+    position = Column(String)
+    q1 = Column(String, nullable=True)
+    q2 = Column(String, nullable=True)
+    q3 = Column(String, nullable=True)

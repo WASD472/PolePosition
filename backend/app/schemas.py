@@ -94,3 +94,16 @@ class ConstructorStandingBase(BaseModel):
 
 class ConstructorStandingResponse(ConstructorStandingBase):
     id: int
+
+
+class QualifyingResultBase(BaseModel):
+    session_id: int
+    driver_id: int
+    constructor_id: int
+    position: str
+    q1: Optional[str] = None
+    q2: Optional[str] = None
+    q3: Optional[str] = None
+
+class QualifyingResultResponse(QualifyingResultBase):
+    id: int

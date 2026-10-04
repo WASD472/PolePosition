@@ -258,6 +258,95 @@ def load_constructor_standings(season: int, db: Session) -> dict:
     return stats
 
 
+def load_qualifying(season: int, db: Session) -> dict:
+    qualifying_sessions = db.query(models.RaceSession).filter(
+        models.RaceSession.type == "qualifying"
+    ).all()
+    
+
+    stats = {"qualifying": 0, "skipped": 0}
+    
+
+    for session in qualifying_sessions:
+        gp = db.query(models.GrandPrix).filter(
+            models.GrandPrix.id == session.grand_prix_id
+        ).first()
+        
+        if not gp:
+            continue
+
+        print(f"Обрабатываю : {gp.name}, round={gp.round}")
+        
+
+        url = f"{JOLPICA_BASE}/{season}/{gp.round}/qualifying.json"
+        response = httpx.get(url, timeout=30.0)
+        response.raise_for_status()
+        data = response.json()
+        
+
+        races = data["MRData"]["RaceTable"]["Races"]
+        if not races:
+            continue
+        
+        qualifying_data = races[0]["QualifyingResults"]
+        
+        for q in qualifying_data:
+
+            code = q["Driver"]["code"]
+            driver = db.query(models.Driver).filter(
+                models.Driver.code == code
+            ).first()
+            
+            if not driver:
+                stats["skipped"] += 1
+                continue
+            
+            jolpica_constructor = q["Constructor"]["constructorId"]
+            constructor_name = CONSTRUCTOR_MAP.get(jolpica_constructor)
+
+            
+            if not constructor_name:
+                stats["skipped"] += 1
+                continue
+            
+            constructor = db.query(models.Constructor).filter(
+                models.Constructor.name == constructor_name
+            ).first()
+
+            
+            if not constructor:
+                stats["skipped"] += 1
+                continue
+            
+
+            existing = db.query(models.QualifyingResult).filter(
+                models.QualifyingResult.session_id == session.id,
+                models.QualifyingResult.driver_id == driver.id
+            ).first()
+            
+            if existing:
+                stats["skipped"] += 1
+                continue
+            
+
+            result = models.QualifyingResult(
+                session_id=session.id,              
+                driver_id=driver.id,                 
+                constructor_id=constructor.id,       
+                position=q["position"],              
+                q1=q.get("Q1"),                
+                q2=q.get("Q2"),                
+                q3=q.get("Q3"),                
+            )
+            db.add(result)
+            stats["qualifying"] += 1
+    
+    db.commit()
+    return stats
+
+
+
+
 def load_results(season: int, db: Session) -> dict:
     # 1. Получаем ВСЕ сессии типа "race" из базы
     # У каждой гонки одна такая сессия типо гонка = сессия
