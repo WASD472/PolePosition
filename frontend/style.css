@@ -279,20 +279,6 @@ nav button.active {
 
 /* === РЕЗУЛЬТАТЫ ГОНКИ === */
 .race-results {
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-    margin-top: 0;
-    padding-top: 0;
-    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-                opacity 0.5s ease-out,
-                margin-top 0.5s ease-out,
-                padding-top 0.5s ease-out;
-}
-
-.card.open .race-results {
-    max-height: 600px;
-    opacity: 1;
     margin-top: 15px;
     padding-top: 15px;
     border-top: 1px solid #2c2c2c;
@@ -308,33 +294,26 @@ nav button.active {
     letter-spacing: 1px;
 }
 
-.result-row {
+.race-results p {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 15px;
+    margin: 4px 0;
     padding: 6px 10px;
     border-radius: 6px;
     transition: background 0.2s;
 }
 
-.result-row:hover {
+.race-results p:hover {
     background: #15151e;
 }
 
-.result-position {
-    min-width: 30px;
-    color: #949498;
-    font-weight: bold;
+.race-results strong {
+    color: #fff;
     font-size: 14px;
 }
 
-.result-name {
-    flex: 1;
-    color: #ffffff;
-    font-size: 14px;
-}
-
-.result-points {
+.race-results span {
     color: #e10600;
     font-weight: bold;
     font-size: 14px;
@@ -386,4 +365,59 @@ nav button.active {
 
 #drivers .standings-btn {
     width: 100%;
+}
+
+.session-item {
+    cursor: pointer;
+}
+
+.session-item.q-open {
+    border-left-color: #FFD700;
+}
+
+.q-results {
+    margin: 10px 0;
+    padding: 10px;
+    background: #15151e;
+    border-radius: 8px;
+    border-left: 2px solid #e10600;
+}
+
+.q-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    color: #fff;
+}
+
+.q-table th {
+    text-align: left;
+    color: #949498;
+    padding: 6px 8px;
+    border-bottom: 1px solid #2c2c2c;
+    font-size: 12px;
+}
+
+.q-table td {
+    padding: 6px 8px;
+}
+
+.q-table tr:hover {
+    background: #1f1f2b;
+}
+
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.session-details > div {
+    animation: slideDown 0.8s ease-out;
 }

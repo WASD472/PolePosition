@@ -95,10 +95,12 @@ function loadGrandprix() {
             <div class="card" data-id="${g.id}">
             <h3>${g.name}</h3>
             <p>Этап ${g.round} · ${g.date}</p>
-            <div class="sessions"></div>
-            <div class="race-results"></div>
+            <div class="sessions"></div> 
+            <div class="session-details"></div>
             </div>
             `;
+            //Sessions - список сессий
+            //sessions details - что показать при клике на сессию
       });
 
       const cards = document.querySelectorAll("#grandprix-content .card"); //Анимация карточки - (1)
@@ -110,79 +112,141 @@ function loadGrandprix() {
     });
 }
 
+
 function toggleSessions(card) {
-  const sessionsDiv = card.querySelector(".sessions");
-  const gpId = card.dataset.id;
+    const sessionsDiv = card.querySelector(".sessions");
+    const gpId = card.dataset.id;
 
-  if (sessionsDiv.classList.contains("open")) {
-    sessionsDiv.classList.remove("open");
-    card.classList.remove("open");
-    return;
-  }
+    if (sessionsDiv.classList.contains("open")) {
+        sessionsDiv.classList.remove("open");
+        card.classList.remove("open");
+        card.querySelector(".session-details").innerHTML="";
+        card.querySelectorAll(".session-item").forEach((s) => s.classList.remove("q-open"));
+        return;
+    }
 
-  document.querySelectorAll("#grandprix-content .sessions").forEach((s) => {
-    s.classList.remove("open");
-  });
-  document.querySelectorAll("#grandprix-content .card").forEach((s) => {
-    s.classList.remove("open");
-  });
+    document.querySelectorAll("#grandprix-content .sessions").forEach((s) => {
+        s.classList.remove("open");
+    });
+    document.querySelectorAll("#grandprix-content .card").forEach((c) => {
+        c.classList.remove("open");
+    });
 
-  fetch(`${API}/racesessions/?grand_prix_id=${gpId}`)
-    .then((response) => response.json())
-    .then((data) => {
-        // === 1. СТАРАЯ ЛОГИКА: рендер сессий ===
-      data.sort((a, b) => {
-        const dateA = new Date(`${a.date}T${a.time}`);
-        const dateB = new Date(`${b.date}T${b.time}`);
-        return dateA - dateB;
-      });
+    fetch(`${API}/racesessions/?grand_prix_id=${gpId}`)
+        .then(response => response.json())
+        .then(data => {
+            data.sort((a, b) => {
+                const dateA = new Date(`${a.date}T${a.time}Z`);
+                const dateB = new Date(`${b.date}T${b.time}Z`);
+                return dateA - dateB;
+            });
 
-      sessionsDiv.innerHTML = "";
+            sessionsDiv.innerHTML = "";
 
-      data.forEach((s) => {
-        const displayName = SESSION_NAMES[s.name] || s.name;
-        sessionsDiv.innerHTML += `
-                <p>
-                <strong>${displayName}</strong>
-                <span>${s.date} ${toMsk(s.date, s.time)}</span> 
-                </p>
+            data.forEach((s) => {
+                const displayName = SESSION_NAMES[s.name] || s.name;
+                sessionsDiv.innerHTML += `
+                    <p class="session-item" data-session-id="${s.id}" data-session-type="${s.type}">
+                        <strong>${displayName}</strong>
+                        <span>${s.date} ${toMsk(s.date, s.time)}</span>
+                    </p>
                 `;
-      });
+            });
 
-      sessionsDiv.classList.add("open");
-      card.classList.add("open");
+            sessionsDiv.classList.add("open");
+            card.classList.add("open");
 
-      // === 2. НОВАЯ ЛОГИКА: рендер результатов ===
-      const raceSession = data.find(s => s.type === "race");
-      if (raceSession) {
+            // обработчики кликов на сессии ===
+            sessionsDiv.querySelectorAll(".session-item").forEach((item) => {
+                item.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    toggleSessionDetails(item, card);
+                });
+            });
+        });
+}
+
+function toggleSessionDetails(sessionItem, card) {
+    const detailsDiv = card.querySelector(".session-details");
+    const sessionId = sessionItem.dataset.sessionId;
+    const sessionType = sessionItem.dataset.sessionType;
+
+    // Если эта сессия уже открыта — закрываем
+    if (sessionItem.classList.contains("q-open")) {
+        sessionItem.classList.remove("q-open");
+        detailsDiv.innerHTML = "";
+        return;
+    }
+
+    // Снять подсветку со всех сессий
+    card.querySelectorAll(".session-item").forEach((s) => {
+        s.classList.remove("q-open");
+    });
+
+    // Пометить текущую
+    sessionItem.classList.add("q-open");
+
+    // Очистить контейнер
+    detailsDiv.innerHTML = "";
+
+    // === QUALIFYING ===
+    if (sessionType === "qualifying") {
         Promise.all([
-            fetch(`${API}/results/?session_id=${raceSession.id}`).then(r => r.json()),
+            fetch(`${API}/qualifying/?session_id=${sessionId}`).then(r => r.json()),
             fetch(`${API}/drivers/`).then(r => r.json())
-        ]).then(([results, drivers ]) => {
+        ]).then(([qualifying, drivers]) => {
+            const driverMap = {};
+            drivers.forEach(d => driverMap[d.id] = `${d.first_name} ${d.last_name}`);
+
+            qualifying.sort((a, b) => parseInt(a.position) - parseInt(b.position));
+
+            let html = `<div class="q-results"><table class="q-table">`;
+            html += `<thead><tr><th>Поз</th><th>Пилот</th><th>Q1</th><th>Q2</th><th>Q3</th></tr></thead><tbody>`;
+
+            qualifying.forEach(q => {
+                const name = driverMap[q.driver_id] || `ID ${q.driver_id}`;
+                html += `<tr>
+                    <td>${q.position}</td>
+                    <td>${name}</td>
+                    <td>${q.q1 || "—"}</td>
+                    <td>${q.q2 || "—"}</td>
+                    <td>${q.q3 || "—"}</td>
+                </tr>`;
+            });
+
+            html += `</tbody></table></div>`;
+            detailsDiv.innerHTML = html;
+        });
+    }
+
+    // === RACE ===
+    else if (sessionType === "race") {
+        Promise.all([
+            fetch(`${API}/results/?session_id=${sessionId}`).then(r => r.json()),
+            fetch(`${API}/drivers/`).then(r => r.json())
+        ]).then(([results, drivers]) => {
             const driverMap = {};
             drivers.forEach(d => driverMap[d.id] = `${d.first_name} ${d.last_name} #${d.number}`);
 
-
             results.sort((a, b) => parseInt(a.position) - parseInt(b.position));
 
-            const resultsDiv = card.querySelector(".race-results");
-            resultsDiv.innerHTML ="";
+            let html = `<div class="race-results">`;
             results.forEach(r => {
                 const name = driverMap[r.driver_id] || `ID ${r.driver_id}`;
-                resultsDiv.innerHTML += `
-                        <div class="result-row">
-                           <span class="result-position">${r.position}</span>
-                           <span class="result-name">${name}</span>
-                           <span class="result-points">${r.points}</span>
-                       </div>
-                `;
+                html += `<p><strong>${r.position}. ${name}</strong><span>${r.points} очков</span></p>`;
             });
+            html += `</div>`;
+            detailsDiv.innerHTML = html;
         });
-      }
+    }
 
-      
-    });
+    // === ОСТАЛЬНЫЕ (FP1, FP2, FP3, sprint) ===
+    else {
+        detailsDiv.innerHTML = `<p class="placeholder">Нет данных</p>`;
+    }
 }
+
+
 
 
 function updateCountdown(session, countdownDiv) {
