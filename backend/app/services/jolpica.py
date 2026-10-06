@@ -145,7 +145,7 @@ def load_driver_standings(season: int, db: Session) -> dict:
     data = response.json()
     
     standings = data["MRData"]["StandingsTable"]["StandingsLists"][0]["DriverStandings"]
-    stats = {"standings": 0, "skipped": 0}
+    stats = {"standings": 0, "updated": 0, "skipped": 0}
     
     for s in standings:
         code = s["Driver"]["code"]
@@ -161,18 +161,21 @@ def load_driver_standings(season: int, db: Session) -> dict:
         ).first()
         
         if existing:
-            stats["skipped"] += 1
-            continue
-        
-        standing = models.DriverStanding(
-            season=season,
-            round=0,
-            position=s["position"],
-            driver_id=driver.id,
-            points=float(s["points"]),
-        )
-        db.add(standing)
-        stats["standings"] += 1
+            #Обновляем данные(Если запись есть)
+            existing.position = s["position"]
+            existing.points = float(s["points"])
+            stats["updated"] += 1
+        else:
+            #Создаем новую запись
+            standing = models.DriverStanding(
+                season=season,
+                round=0,
+                position=s["position"],
+                driver_id=driver.id,
+                points=float(s["points"]),
+            )
+            db.add(standing)
+            stats["standings"] += 1
     
     db.commit()
     return stats
@@ -219,7 +222,7 @@ def load_constructor_standings(season: int, db: Session) -> dict:
     data = response.json()
 
     standings = data["MRData"]["StandingsTable"]["StandingsLists"][0]["ConstructorStandings"]
-    stats = {"standings": 0, "skipped": 0}
+    stats = {"standings": 0, "updated": 0, "skipped": 0}
 
     for s in standings:
         jolpica_id = s["Constructor"]["constructorId"]
@@ -241,18 +244,19 @@ def load_constructor_standings(season: int, db: Session) -> dict:
         ).first()
 
         if existing:
-            stats["skipped"] += 1
-            continue
-
-        standing = models.ConstructorStanding(
-            season=season,
-            round=0,
-            position=s["position"],
-            constructor_id=constructor.id,
-            points=float(s["points"]),
-        )
-        db.add(standing)
-        stats["standings"] += 1
+            existing.position = s["position"]
+            existing.points = float(s["points"])
+            stats["updated"] += 1
+        else:
+            standing = models.ConstructorStanding(
+                season=season,
+                round=0,
+                position=s["position"],
+                constructor_id=constructor.id,
+                points=float(s["points"]),
+            )
+            db.add(standing)
+            stats["standings"] += 1
 
     db.commit()
     return stats
@@ -351,13 +355,13 @@ def load_results(season: int, db: Session) -> dict:
     # 1. Получаем ВСЕ сессии типа "race" из базы
     # У каждой гонки одна такая сессия типо гонка = сессия
     race_sessions = db.query(models.RaceSession).filter(
-        models.RaceSession.type == "race"
+        models.RaceSession.type.in_(["race", "sprint"])
     ).all()
     
     # Счётчики для отчёта: сколько создали, сколько пропустили
-    stats = {"results": 0, "skipped": 0}
+    stats = {"results": 0, "sprint": 0, "skipped": 0}
 
-    print(f"Всего гонок : {len(race_sessions)}")
+    print(f"Всего сессий (race + sprint) : {len(race_sessions)}")
     
     # 2. Проходимся по каждой гонке сезона
     for session in race_sessions:
@@ -369,22 +373,25 @@ def load_results(season: int, db: Session) -> dict:
         if not gp:
             continue  # нет ГП — пропускаем (не должно быть)
 
-        print(f"Обрабатываю : {gp.name}, round={gp.round}")
+        print(f"Обрабатываю : {gp.name}, round={gp.round} type={session.type}")
         
         # 3. Запрашиваем результаты конкретной гонки из Jolpica
-        # URL: https://api.jolpi.ca/ergast/f1/2026/{round}/results.json
-        url = f"{JOLPICA_BASE}/{season}/{gp.round}/results.json"
+        if session.type == "sprint":
+            url = f"{JOLPICA_BASE}/{season}/{gp.round}/sprint.json"
+            results_key = "SprintResults"
+        else:
+            url = f"{JOLPICA_BASE}/{season}/{gp.round}/results.json"
+            results_key = "Results"
+        
         response = httpx.get(url, timeout=30.0)
         response.raise_for_status()
         data = response.json()
         
-        # 4. Достаём массив результатов
-        # Путь: MRData → RaceTable → Races → [0] (первая и единственная гонка) → Results
         races = data["MRData"]["RaceTable"]["Races"]
         if not races:
             continue
         
-        results_data = races[0]["Results"]  # массив из 20-22 результатов
+        results_data = races[0][results_key]
         
         # 5. Проходимся по каждому пилоту в результатах
         for r in results_data:
@@ -456,7 +463,10 @@ def load_results(season: int, db: Session) -> dict:
                 fastest_lap=fastest,                 # True/False
             )
             db.add(result)
-            stats["results"] += 1
+            if session.type == "sprint":
+                stats["sprint"] += 1
+            else:
+                stats["results"] += 1
     
     # 6. Один коммит в конце — все изменения сразу
     db.commit()

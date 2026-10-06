@@ -32,8 +32,11 @@ function loadCircuits() {
             <div class="card">
                 <h3>${c.name}</h3>
                 <p>${c.locality}, ${c.country}</p>
+                ${c.length ? `<p>Длина круга: ${c.length} км · Кругов: ${c.laps}</p>` : ""}
+                ${c.first_gp_year ? `<p>Первый ГП: ${c.first_gp_year}</p>` : ""}
+                ${c.description ? `<p class="circuit-description">${c.description}</p>` : ""}
             </div>
-            `;
+        `;
       });
     });
 }
@@ -219,8 +222,8 @@ function toggleSessionDetails(sessionItem, card) {
         });
     }
 
-    // === RACE ===
-    else if (sessionType === "race") {
+    // === RACE + sprint ===
+    else if (sessionType === "race" || sessionType === "sprint") {
         Promise.all([
             fetch(`${API}/results/?session_id=${sessionId}`).then(r => r.json()),
             fetch(`${API}/drivers/`).then(r => r.json())

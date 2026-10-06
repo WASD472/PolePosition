@@ -421,3 +421,10 @@ nav button.active {
 .session-details > div {
     animation: slideDown 0.8s ease-out;
 }
+
+.circuit-description {
+    color: #949498;
+    font-size: 13px;
+    font-style: italic;
+    margin-top: 8px;
+}

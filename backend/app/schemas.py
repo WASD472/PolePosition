@@ -6,6 +6,10 @@ class CircuitBase(BaseModel):
     name: str
     locality: str
     country: str
+    length: Optional[float] = None
+    laps: Optional[int] = None
+    first_gp_year: Optional[int] = None
+    description: Optional[str] = None
 
 class CircuitResponse(CircuitBase):
     id: int

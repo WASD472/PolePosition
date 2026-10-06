@@ -9,6 +9,10 @@ class Circuit(Base):
     name = Column(String)
     locality = Column(String)
     country = Column(String)
+    length = Column(Float, nullable=True)          # длина круга в км
+    laps = Column(Integer, nullable=True)          # число кругов
+    first_gp_year = Column(Integer, nullable=True) # год первого ГП
+    description = Column(String, nullable=True)    # короткое описание
 
 class GrandPrix(Base):
     __tablename__ = "grandprix"
